@@ -7,6 +7,7 @@
 
 import argparse
 import hashlib
+import json
 import os
 import shlex
 import shutil
@@ -206,6 +207,71 @@ class _ProjectCommand(WestCommand):
             self.die(f'invalid format string {shlex.quote(fmt)}')
 
         self.inf(result, colorize=False)
+
+    def _resolve_mirror_url(self, url, cwd=None):
+        # Shared by Init and Update to rewrite 'url' using the
+        # 'url.insteadof' configuration option, if set. The value must
+        # be a JSON array of strings in the form "remote=mirror". Each mapping is
+        # tried in order, and the first mirror that 'git ls-remote --exit-code'
+        # reports as reachable is returned. Falls back to the original 'url'
+        # if no mapping matches or no mirror is reachable. If 'cwd' is set,
+        # probing runs in that working directory.
+        url_insteadof_config = self.config.get('url.insteadof')
+        if not url_insteadof_config:
+            return url
+
+        try:
+            url_mappings = json.loads(url_insteadof_config)
+        except json.JSONDecodeError:
+            self.die(
+                f'invalid url.insteadof configuration: expected JSON array of "remote=mirror" '
+                f'strings, got {url_insteadof_config!r}'
+            )
+
+        if not isinstance(url_mappings, list):
+            self.die(
+                'invalid url.insteadof configuration: expected JSON array of '
+                '"remote=mirror" strings'
+            )
+
+        for mapping in url_mappings:
+            if not isinstance(mapping, str):
+                self.die(
+                    'invalid url.insteadof configuration: each entry must be a '
+                    '"remote=mirror" string'
+                )
+
+            remote, sep, mirror = mapping.partition('=')
+            if not sep:
+                self.die(f'invalid url.insteadof mapping entry {mapping!r}: missing "=" separator')
+
+            remote = remote.strip()
+            mirror = mirror.strip()
+            if not remote or not mirror:
+                self.die(
+                    f'invalid url.insteadof mapping entry {mapping!r}: empty remote or mirror value'
+                )
+
+            remote = remote.rstrip('/') + '/'
+            mirror = mirror.rstrip('/') + '/'
+            if not url.startswith(remote):
+                continue
+
+            mirror_url = mirror + url.removeprefix(remote)
+            result = subprocess.run(
+                ['git', '-c', 'core.askPass=true', 'ls-remote', '--exit-code', mirror_url],
+                check=False,
+                capture_output=True,
+                text=True,
+                cwd=cwd,
+            )
+            if not result.returncode:
+                self.inf(f"    [info] using mirror: {mirror_url}")
+                return mirror_url
+            else:
+                self.dbg(f'    [debug] mirror was specified, but "{mirror_url}" was not found...')
+
+        return url
 
 
 class Init(_ProjectCommand):
@@ -582,6 +648,7 @@ below.
         shutil.rmtree(tempdir2)
 
         # Clone the manifest repository into a temporary directory.
+        manifest_url = self._resolve_mirror_url(manifest_url)
         try:
             self.small_banner(
                 f'Cloning manifest repository from {manifest_url}'
@@ -1958,8 +2025,9 @@ class Update(_ProjectCommand):
             cache_dir_parent = Path(cache_dir).parent
             cache_dir_parent.mkdir(parents=True, exist_ok=True)
             self.dbg(f'{project.name}: create auto-cache for {project.url} in {cache_dir}')
+            _url = self._resolve_mirror_url(project.url, cwd=cache_dir_parent)
             project.git(
-                ['clone', '--mirror', '--', project.url, os.fspath(cache_dir)], cwd=cache_dir_parent
+                ['clone', '--mirror', '--', _url, os.fspath(cache_dir)], cwd=cache_dir_parent
             )
             self.create_auto_cache_info(project, cache_dir)
         else:
@@ -2154,9 +2222,11 @@ class Update(_ProjectCommand):
         # automatically fetch the auto-cache so that it is up-to-date
         self.handle_auto_cache(project)
 
-        # fetch workspace repository from freshly synced auto-cache if
-        # auto-cache is used. Otherwise fetch directly from remote url.
+        # Fetch the workspace repository from the freshly synced auto-cache
+        # when auto-cache is enabled; otherwise fetch directly from the remote URL
+        # or the url.insteadof mirror URL.
         fetch_url = self.project_auto_cache(project) or project.url
+        fetch_url = self._resolve_mirror_url(fetch_url, cwd=project.abspath)
 
         # -f is needed to avoid errors in case multiple remotes are
         # present, at least one of which contains refs that can't be
