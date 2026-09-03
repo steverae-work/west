@@ -18,7 +18,7 @@ def log_config(cwd=None):
 
 
 def mapping_entry(remote, mirror):
-    return f'{remote}={mirror}'
+    return f'{remote}>{mirror}'
 
 
 def test_url_insteadof_init_manifest_clone(repos_tmpdir):
@@ -387,14 +387,14 @@ def test_url_insteadof_invalid_json_fails(repos_tmpdir):
 @pytest.mark.parametrize(
     'config_value, expected_error',
     [
-        (json.dumps({'remote1': 'mirror1'}), 'expected JSON array of "remote=mirror" strings'),
+        (json.dumps({'remote1': 'mirror1'}), 'expected JSON array of "remote>mirror" strings'),
         (
             json.dumps([{'remote1': 'mirror1'}]),
-            'each entry must be a "remote=mirror" string',
+            'each entry must be a "remote>mirror" string',
         ),
-        (json.dumps(['remote1-mirror1']), 'missing "=" separator'),
-        (json.dumps(['=mirror1']), 'empty remote or mirror value'),
-        (json.dumps(['remote1=']), 'empty remote or mirror value'),
+        (json.dumps(['remote1=mirror1']), 'missing ">" separator'),
+        (json.dumps(['>mirror1']), 'empty remote or mirror value'),
+        (json.dumps(['remote1>']), 'empty remote or mirror value'),
     ],
 )
 def test_url_insteadof_invalid_mapping_format_fails(repos_tmpdir, config_value, expected_error):

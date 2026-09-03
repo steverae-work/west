@@ -224,26 +224,26 @@ class _ProjectCommand(WestCommand):
             url_mappings = json.loads(url_insteadof_config)
         except json.JSONDecodeError:
             self.die(
-                f'invalid url.insteadof configuration: expected JSON array of "remote=mirror" '
+                f'invalid url.insteadof configuration: expected JSON array of "remote>mirror" '
                 f'strings, got {url_insteadof_config!r}'
             )
 
         if not isinstance(url_mappings, list):
             self.die(
                 'invalid url.insteadof configuration: expected JSON array of '
-                '"remote=mirror" strings'
+                '"remote>mirror" strings'
             )
 
         for mapping in url_mappings:
             if not isinstance(mapping, str):
                 self.die(
                     'invalid url.insteadof configuration: each entry must be a '
-                    '"remote=mirror" string'
+                    '"remote>mirror" string'
                 )
 
             remote, sep, mirror = mapping.partition('>')
             if not sep:
-                self.die(f'invalid url.insteadof mapping entry {mapping!r}: missing "=" separator')
+                self.die(f'invalid url.insteadof mapping entry {mapping!r}: missing ">" separator')
 
             remote = remote.strip()
             mirror = mirror.strip()
