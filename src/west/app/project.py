@@ -265,10 +265,10 @@ class _ProjectCommand(WestCommand):
                 env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'},
             )
             if not result.returncode:
-                self.inf(f"    [info] using mirror: {mirror_url}")
+                self.inf(f"using mirror: {mirror_url}")
                 return mirror_url
             else:
-                self.dbg(f'    [debug] mirror was specified, but "{mirror_url}" was not found...')
+                self.dbg(f'mirror was specified, but "{mirror_url}" was not found...')
 
         return url
 
