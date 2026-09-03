@@ -316,7 +316,8 @@ def test_url_insteadof_first_working_mirror_wins(repos_tmpdir):
     output = cmd('update', cwd=workspace)
 
     # First mirror should be used (normalize paths for comparison)
-    normalized_output = output.replace(r'\', r'/')
+    ###normalized_output = output.replace(r'\', r'/')
+    normalized_output = output.replace('\\', '/')
     assert str(mirrors1).replace('\\', '/') in normalized_output
     # Second mirror should not appear
     assert str(mirrors2).replace('\\', '/') not in normalized_output
