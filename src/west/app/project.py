@@ -257,11 +257,12 @@ class _ProjectCommand(WestCommand):
 
             mirror_url = mirror + url.removeprefix(remote)
             result = subprocess.run(
-                ['git', '-c', 'core.askPass=true', 'ls-remote', '--exit-code', mirror_url],
+                ['git', 'ls-remote', '--exit-code', mirror_url],
                 check=False,
                 capture_output=True,
                 text=True,
                 cwd=cwd,
+                env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'},
             )
             if not result.returncode:
                 self.inf(f"    [info] using mirror: {mirror_url}")

@@ -62,7 +62,7 @@ def test_url_insteadof_init_manifest_clone(repos_tmpdir):
 
 def test_url_insteadof_prevents_credential_prompt(repos_tmpdir):
     """Test that url.insteadof probe doesn't trigger credential prompts."""
-    # This is a regression test to ensure -c core.askPass=true is used
+    # This is a regression test to ensure GIT_TERMINAL_PROMPT=0 is used.
     remotes = repos_tmpdir / 'repos'
     workspace = repos_tmpdir / 'workspace'
     manifest = remotes / 'zephyr'
