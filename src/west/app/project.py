@@ -241,7 +241,7 @@ class _ProjectCommand(WestCommand):
                     '"remote=mirror" string'
                 )
 
-            remote, sep, mirror = mapping.partition('=')
+            remote, sep, mirror = mapping.partition('>')
             if not sep:
                 self.die(f'invalid url.insteadof mapping entry {mapping!r}: missing "=" separator')
 
@@ -252,8 +252,6 @@ class _ProjectCommand(WestCommand):
                     f'invalid url.insteadof mapping entry {mapping!r}: empty remote or mirror value'
                 )
 
-            remote = remote.rstrip('/') + '/'
-            mirror = mirror.rstrip('/') + '/'
             if not url.startswith(remote):
                 continue
 

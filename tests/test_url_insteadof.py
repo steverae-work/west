@@ -13,7 +13,7 @@ from conftest import (
 )
 
 
-def dump_url_insteadof_config(cwd=None):
+def log_config(cwd=None):
     print(cmd('config -l', cwd=cwd).rstrip())
 
 
@@ -46,7 +46,7 @@ def test_url_insteadof_init_manifest_clone(repos_tmpdir):
             json.dumps([mapping_entry(remotes_url, mirrors_url)]),
         ]
     )
-    dump_url_insteadof_config()
+    log_config()
 
     try:
         # Now run init, which should use the mirror for cloning the manifest
@@ -78,7 +78,7 @@ def test_url_insteadof_prevents_credential_prompt(repos_tmpdir):
         ],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # This should complete without hanging on credential prompt
     # The test will timeout if credential prompt blocks
@@ -114,7 +114,7 @@ def test_url_insteadof_basic_prefix_match(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(str(remotes), str(mirrors))])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update - should use mirror for net-tools
     output = cmd('update', cwd=workspace)
@@ -160,7 +160,7 @@ def test_url_insteadof_basic_prefix_match_json_array(repos_tmpdir):
         ],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     output = cmd('update', cwd=workspace)
 
@@ -184,7 +184,7 @@ def test_url_insteadof_nonexistent_mirror_fallback(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(str(remotes), str(nonexistent))])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update - should fall back to original URL
     output = cmd('update', cwd=workspace)
@@ -239,7 +239,7 @@ def test_url_insteadof_multiple_mappings(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps(mirror_config)],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     cmd('update', cwd=workspace)
 
@@ -266,13 +266,13 @@ def test_url_insteadof_no_prefix_match(repos_tmpdir):
         ],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update - should use original URLs since prefix doesn't match
     output = cmd('update', cwd=workspace)
 
     # No mirror messages should appear
-    assert 'using mirror:' not in output
+    assert 'irror' not in output
 
     # Projects should still be cloned from original
     assert (workspace / 'net-tools' / '.git').check(dir=1)
@@ -300,7 +300,7 @@ def test_url_insteadof_with_trailing_slashes(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(f'{remotes}/', f'{mirrors}/')])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     output = cmd('update', cwd=workspace)
 
@@ -342,12 +342,12 @@ def test_url_insteadof_first_working_mirror_wins(repos_tmpdir):
         ]
     )
     cmd(['config', 'url.insteadof', mirror_config], cwd=workspace)
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     output = cmd('update', cwd=workspace)
 
     # First mirror should be used (normalize paths for comparison)
-    normalized_output = output.replace('\\', '/')
+    normalized_output = output.replace(r'\', r'/')
     assert str(mirrors1).replace('\\', '/') in normalized_output
     # Second mirror should not appear
     assert str(mirrors2).replace('\\', '/') not in normalized_output
@@ -366,7 +366,7 @@ def test_url_insteadof_empty_config(repos_tmpdir):
 
     # Should work normally
     assert (workspace / 'net-tools' / '.git').check(dir=1)
-    assert 'using mirror:' not in output
+    assert 'irror' not in output
 
 
 def test_url_insteadof_invalid_json_fails(repos_tmpdir):
@@ -378,7 +378,7 @@ def test_url_insteadof_invalid_json_fails(repos_tmpdir):
     cmd(['init', '-m', str(manifest), str(workspace)], env={'ZEPHYR_BASE': None})
 
     cmd(['config', 'url.insteadof', '["missing-end"'], cwd=workspace)
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     with pytest.raises(SystemExit):
         cmd('update', cwd=workspace)
@@ -442,7 +442,7 @@ def test_url_insteadof_with_auto_cache(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(remotes_url, mirrors_url)])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update for net-tools - should create auto-cache via mirror
     cmd(['update', 'net-tools'], cwd=workspace)
@@ -490,7 +490,7 @@ def test_url_insteadof_with_name_cache(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(remotes_url, mirrors_url)])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update with --name-cache - should clone from name-cache (which was created via mirror)
     output = cmd(['update', '--name-cache', str(name_cache_dir), 'net-tools'], cwd=workspace)
@@ -536,7 +536,7 @@ def test_url_insteadof_with_path_cache(repos_tmpdir):
         ['config', 'url.insteadof', json.dumps([mapping_entry(remotes_url, mirrors_url)])],
         cwd=workspace,
     )
-    dump_url_insteadof_config(cwd=workspace)
+    log_config(cwd=workspace)
 
     # Run update with --path-cache - should clone from path-cache (which was created via mirror)
     output = cmd(['update', '--path-cache', str(path_cache_dir), 'tagged_repo'], cwd=workspace)
