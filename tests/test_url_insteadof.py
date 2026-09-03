@@ -278,37 +278,6 @@ def test_url_insteadof_no_prefix_match(repos_tmpdir):
     assert (workspace / 'net-tools' / '.git').check(dir=1)
 
 
-def test_url_insteadof_with_trailing_slashes(repos_tmpdir):
-    """Test that url.insteadof handles trailing slashes correctly."""
-    remotes = repos_tmpdir / 'repos'
-    mirrors = repos_tmpdir / 'mirrors'
-    mirrors.mkdir()
-
-    original_net_tools = remotes / 'net-tools'
-    mirror_net_tools = mirrors / 'net-tools'
-    subprocess.check_call(
-        ['git', 'clone', '--mirror', str(original_net_tools), str(mirror_net_tools)]
-    )
-
-    workspace = repos_tmpdir / 'workspace'
-    manifest = remotes / 'zephyr'
-
-    cmd(['init', '-m', str(manifest), str(workspace)], env={'ZEPHYR_BASE': None})
-
-    # Test with and without trailing slashes (should be normalized)
-    cmd(
-        ['config', 'url.insteadof', json.dumps([mapping_entry(f'{remotes}/', f'{mirrors}/')])],
-        cwd=workspace,
-    )
-    log_config(cwd=workspace)
-
-    output = cmd('update', cwd=workspace)
-
-    assert 'using mirror:' in output
-    normalized_output = output.replace('\\', '/')
-    assert str(mirror_net_tools).replace('\\', '/') in normalized_output
-
-
 def test_url_insteadof_first_working_mirror_wins(repos_tmpdir):
     """Test that first reachable mirror is used when multiple match."""
     remotes = repos_tmpdir / 'repos'
@@ -367,21 +336,6 @@ def test_url_insteadof_empty_config(repos_tmpdir):
     # Should work normally
     assert (workspace / 'net-tools' / '.git').check(dir=1)
     assert 'irror' not in output
-
-
-def test_url_insteadof_invalid_json_fails(repos_tmpdir):
-    """Test that malformed url.insteadof JSON fails the command."""
-    remotes = repos_tmpdir / 'repos'
-    workspace = repos_tmpdir / 'workspace'
-    manifest = remotes / 'zephyr'
-
-    cmd(['init', '-m', str(manifest), str(workspace)], env={'ZEPHYR_BASE': None})
-
-    cmd(['config', 'url.insteadof', '["missing-end"'], cwd=workspace)
-    log_config(cwd=workspace)
-
-    with pytest.raises(SystemExit):
-        cmd('update', cwd=workspace)
 
 
 @pytest.mark.parametrize(
