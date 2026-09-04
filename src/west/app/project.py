@@ -2241,8 +2241,9 @@ class Update(_ProjectCommand):
         # Fetch the workspace repository from the freshly synced auto-cache
         # when auto-cache is enabled; otherwise fetch directly from the remote URL
         # or the url.insteadof mirror URL.
-        fetch_url = self.project_auto_cache(project) or project.url
-        fetch_url = self._resolve_mirror_url(fetch_url, cwd=project.abspath)
+        fetch_url = self.project_auto_cache(project)
+        if not fetch_url:
+            fetch_url = self._resolve_mirror_url(project.url, cwd=project.abspath)
 
         # -f is needed to avoid errors in case multiple remotes are
         # present, at least one of which contains refs that can't be
