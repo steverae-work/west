@@ -50,6 +50,10 @@ class _ProjectCommand(WestCommand):
     # Helper class which contains common code needed by various commands
     # in this file.
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._url_insteadof_mappings = None
+
     def _parser(self, parser_adder, **kwargs):
         # Create and return a "standard" parser.
 
@@ -208,17 +212,15 @@ class _ProjectCommand(WestCommand):
 
         self.inf(result, colorize=False)
 
-    def _resolve_mirror_url(self, url, cwd=None):
-        # Shared by Init and Update to rewrite 'url' using the
-        # 'url.insteadof' configuration option, if set. The value must
-        # be a JSON array of strings in the form "remote=mirror". Each mapping is
-        # tried in order, and the first mirror that 'git ls-remote --exit-code'
-        # reports as reachable is returned. Falls back to the original 'url'
-        # if no mapping matches or no mirror is reachable. If 'cwd' is set,
-        # probing runs in that working directory.
+    def _parsed_url_insteadof_mappings(self):
+        if self._url_insteadof_mappings is not None:
+            return self._url_insteadof_mappings
+
+        # Parse and validate this once, since update can resolve many URLs.
         url_insteadof_config = self.config.get('url.insteadof')
         if not url_insteadof_config:
-            return url
+            self._url_insteadof_mappings = ()
+            return self._url_insteadof_mappings
 
         try:
             url_mappings = json.loads(url_insteadof_config)
@@ -234,6 +236,7 @@ class _ProjectCommand(WestCommand):
                 '"remote>mirror" strings'
             )
 
+        parsed_mappings = []
         for mapping in url_mappings:
             if not isinstance(mapping, str):
                 self.die(
@@ -252,6 +255,20 @@ class _ProjectCommand(WestCommand):
                     f'invalid url.insteadof mapping entry {mapping!r}: empty remote or mirror value'
                 )
 
+            parsed_mappings.append((remote, mirror))
+
+        self._url_insteadof_mappings = tuple(parsed_mappings)
+        return self._url_insteadof_mappings
+
+    def _resolve_mirror_url(self, url, cwd=None):
+        # Shared by Init and Update to rewrite 'url' using the
+        # 'url.insteadof' configuration option, if set. The value must
+        # be a JSON array of strings in the form "remote=mirror". Each mapping is
+        # tried in order, and the first mirror that 'git ls-remote --exit-code'
+        # reports as reachable is returned. Falls back to the original 'url'
+        # if no mapping matches or no mirror is reachable. If 'cwd' is set,
+        # probing runs in that working directory.
+        for remote, mirror in self._parsed_url_insteadof_mappings():
             if not url.startswith(remote):
                 continue
 
