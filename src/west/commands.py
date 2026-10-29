@@ -114,6 +114,27 @@ class Verbosity(IntEnum):
     #: output is also printed.
     DBG_EXTREME = 6
 
+    #: Prefix printed before each log line at this level, e.g. "WARNING: ".
+    #: A plain attribute set below, not a @property, for performance.
+    _line_prefix: str
+
+
+_VERBOSITY_PREFIXES = {
+    Verbosity.QUIET: "",
+    Verbosity.ERR: "ERROR",
+    Verbosity.WRN: "WARNING",
+    # Ignored by inf() for legacy reasons, see #999. Printed by the awkward dbg(..., level=INFO)
+    Verbosity.INF: "INFO",
+    Verbosity.DBG: "DEBUG",
+    Verbosity.DBG_MORE: "TRACE",
+    Verbosity.DBG_EXTREME: "TRACE",
+}
+
+# Append colon+space.
+for lvl, prefix in _VERBOSITY_PREFIXES.items():
+    lvl._line_prefix = prefix + ': '
+Verbosity.QUIET._line_prefix = ''
+
 
 #: Color used (when applicable) for printing with inf()
 INF_COLOR = colorama.Fore.LIGHTGREEN_EX
@@ -440,6 +461,7 @@ class WestCommand(ABC):
         '''
         if self.verbosity < level:
             return
+        print(level._line_prefix, end='')
         print(*args, end=end)
 
     def inf(self, *args, colorize: bool = False, end: str = '\n'):
@@ -465,6 +487,7 @@ class WestCommand(ABC):
         if colorize:
             print(INF_COLOR, end='')
 
+        # Do not prefix with "INFO: " for legacy reasons, see #999
         print(*args, end=end)
 
         if colorize:
@@ -499,7 +522,7 @@ class WestCommand(ABC):
         if self.color_ui:
             print(WRN_COLOR, end='', file=sys.stderr)
 
-        print('WARNING: ', end='', file=sys.stderr)
+        print(Verbosity.WRN._line_prefix, end='', file=sys.stderr)
         print(*args, end=end, file=sys.stderr)
 
         if self.color_ui:
@@ -526,7 +549,7 @@ class WestCommand(ABC):
         if self.color_ui:
             print(ERR_COLOR, end='', file=sys.stderr)
 
-        print('FATAL ERROR: ' if fatal else 'ERROR: ', end='', file=sys.stderr)
+        print(('FATAL ' if fatal else '') + Verbosity.ERR._line_prefix, end='', file=sys.stderr)
         print(*args, end=end, file=sys.stderr)
 
         if self.color_ui:

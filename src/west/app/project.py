@@ -1699,7 +1699,7 @@ class Update(_ProjectCommand):
     def update_importer(self, project, path):
         if isinstance(project, ManifestProject):
             if not project.is_cloned():
-                self.die("manifest repository {project.abspath} was deleted")
+                self.die(f"manifest repository {project.abspath} was deleted")
         else:
             # There's no need to call self.project_is_active(),
             # because the Manifest API guarantees that 'groups' cannot
@@ -2096,16 +2096,28 @@ class Update(_ProjectCommand):
             self.small_banner(f'{project.name}: cloning from {cache_dir}')
             # Clone the project from a local cache repository. Set the
             # remote name to the value that would be used without a
-            # cache.
+            # cache. Do not check out any files: west checks out the
+            # manifest revision afterwards anyway, so they would be
+            # written twice.
             project.git(
-                ['clone', '--origin', project.remote_name, cache_dir, project.abspath],
+                [
+                    'clone',
+                    '--no-checkout',
+                    '--origin',
+                    project.remote_name,
+                    cache_dir,
+                    project.abspath,
+                ],
                 cwd=self.topdir,
             )
             # Reset the remote's URL to the project's fetch URL.
             project.git(['remote', 'set-url', '--', project.remote_name, project.url])
             # Make sure we have a detached HEAD so we can delete the
-            # local branch created by git clone.
-            project.git('checkout --quiet --detach HEAD')
+            # local branch created by git clone, if any. Use update-ref
+            # instead of 'checkout --detach', which would write the files.
+            # --no-deref applies only to the first HEAD (the ref to
+            # write), so this makes HEAD point at its current commit.
+            project.git('update-ref --no-deref HEAD HEAD')
             # Find the name of any local branch created by git clone.
             # West commits to only touching 'manifest-rev' in the
             # local branch name space.
@@ -2320,9 +2332,10 @@ class Update(_ProjectCommand):
         try:
             if take_stats:
                 start = perf_counter()
-            return project.sha(QUAL_MANIFEST_REV)
+            sha = project.sha(QUAL_MANIFEST_REV)
             if take_stats:
                 stats['get new manifest-rev SHA'] = perf_counter() - start
+            return sha
         except subprocess.CalledProcessError:
             # This is a sign something's really wrong. Add more help.
             self.err(
