@@ -1,0 +1,21 @@
+name: Scheduled Upstream Sync
+
+on:
+  schedule:
+    - cron: '30 13 * * *' # Runs every day at 1330h UTC
+  workflow_dispatch: # Allows you to trigger it manually via the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync upstream changes
+        run: |
+          gh repo sync ${{ github.repository }} -b main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
