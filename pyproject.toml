@@ -57,6 +57,14 @@ dev = [
     {include-group = "test"},
     {include-group = "types"},
 ]
+docs = [
+    "sphinx~=9.1.0",
+    "sphinx-rtd-theme~=3.0",
+    "sphinx-tabs~=3.4",
+]
+
+[tool.uv.dependency-groups]
+docs = { requires-python = ">=3.12" }
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -115,6 +123,10 @@ env = {PYTHONIOENCODING = "utf-8"}
 
 [tool.poe.tasks.test-xdist]
 ref = "test -n auto"
+
+[tool.poe.tasks.build-docs]
+cmd = "sphinx-build -M html . _build"
+cwd = "./doc"
 
 [tool.poe.tasks]
 lint = "ruff check ."
